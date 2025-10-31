@@ -3,18 +3,14 @@
 A console-based assistant that triages campus support tickets, demonstrates behavioural design patterns, and produces tailored responses for each office. The bot now centralises topic knowledge, includes library support, and offers an inline help command so users can discover keywords quickly.
 
 ## Project Overview
+
 - Accepts free-text requests from students or staff and turns them into routed tickets.
 - Filters spam, infers urgency, classifies the topic, assigns the owning office, and generates a contextual reply.
 - Notifies subscribed offices (Observer pattern) whenever a valid ticket is created.
 - Provides `help` and `exit` commands directly in the console for faster onboarding.
 
-## Key Improvements
-- Introduced `SupportTopic` enum to keep keywords, owning offices, and strategies in one place. This removes duplicated switch statements and makes it easy to grow the catalogue.
-- Added dedicated strategies for General and Library support, plus richer priority heuristics.
-- Extended the observer list with the Library Services office and exposed a `help` command that prints sample keywords for every topic.
-- Updated UML (`campus-helpdesk-class-diagram.puml`) to reflect the refined architecture, including the topic catalogue.
-
 ## Architecture at a Glance
+
 - **Chain of Responsibility (`src/com/campushelpdesk/chain`)**  
   `SpamFilterHandler` -> `PriorityHandler` -> `TriageHandler` -> `AssignmentHandler` -> `SupportHandler`. Each handler performs one responsibility and can short-circuit the flow.
 - **Support Catalogue (`SupportTopic`)**  
@@ -26,15 +22,8 @@ A console-based assistant that triages campus support tickets, demonstrates beha
 - **Utilities (`src/com/campushelpdesk/util/TicketGenerator.java`)**  
   Generates date-based ticket identifiers with topic-specific prefixes.
 
-## UML Diagram Guide
-Open `campus-helpdesk-class-diagram.puml` (or the exported `uml.png`) to view the structure:
-- The model package shows `SupportRequest` and `SupportTopic`. The association between them highlights that every processed request stores its resolved topic.
-- The chain package outlines the handler pipeline and the shared `setNext` link between handlers.
-- The strategy package displays all available response strategies, including the new General and Library implementations.
-- The observer package illustrates how offices subscribe to notifications.
-- Additional arrows capture how handlers depend on topics, strategies, and ticket generation.
-
 ## Code Walkthrough
+
 1. `Main.java` prints the banner, registers observers (IT, Facilities, Registrar, Finance, Library), builds the handler chain, and loops on user input. Typing `help` displays the latest topic keywords.
 2. `SpamFilterHandler` rejects obviously irrelevant text.
 3. `PriorityHandler` uses a curated keyword list to upgrade critical incidents to `HIGH` priority.
@@ -43,20 +32,23 @@ Open `campus-helpdesk-class-diagram.puml` (or the exported `uml.png`) to view th
 6. `SupportHandler` delegates to the topic-specific `SupportStrategy` and stores the generated response.
 
 ## Running the Bot
+
 ```bash
 cd src
 javac com/campushelpdesk/**/*.java
 java com.campushelpdesk.Main
 ```
+
 While the program runs:
+
 - Type any request, for example `Wifi is down in the library` or `Need help requesting a transcript`.
 - Type `help` to see recognised keywords per topic.
 - Type `exit` to close the session.
 
 ## Extending the System
+
 - Add a new topic by creating a strategy class and adding an entry to `SupportTopic`.
 - Plug the notifier into your preferred communication channel (email/SMS/Slack) by replacing the console printout in `OfficeObserver`.
 - Integrate persistence by storing `SupportRequest` snapshots after `SupportHandler` finishes.
 
 ---
-Feel free to open an issue or send a pull request if you experiment with additional patterns or integrations. The modular design keeps new features low-risk.
