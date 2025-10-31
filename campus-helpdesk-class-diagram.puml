@@ -1,0 +1,121 @@
+@startuml
+title Campus Helpdesk Bot System — Class Diagram
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+
+package "com.campushelpdesk.model" {
+  class SupportRequest {
+    - message : String
+    - spam : boolean
+    - priority : String
+    - type : String
+    - assignedOffice : String
+    - response : String
+    - ticketId : String
+    - notifier : Notifier
+    + SupportRequest(message:String)
+    + getMessage() : String
+    + isSpam() : boolean
+    + setSpam(boolean) : void
+    + getPriority() : String
+    + setPriority(String) : void
+    + getType() : String
+    + setType(String) : void
+    + getAssignedOffice() : String
+    + setAssignedOffice(String) : void
+    + getResponse() : String
+    + setResponse(String) : void
+    + getTicketId() : String
+    + setTicketId(String) : void
+    + getNotifier() : Notifier
+    + setNotifier(Notifier) : void
+  }
+}
+
+package "com.campushelpdesk.chain" {
+  abstract class Handler {
+    - next : Handler
+    + setNext(next:Handler) : Handler
+    + handle(req:SupportRequest) : void
+    # process(req:SupportRequest) : boolean
+  }
+
+  class SpamFilterHandler extends Handler
+  class PriorityHandler extends Handler
+  class TriageHandler extends Handler
+  class AssignmentHandler extends Handler
+  class SupportHandler extends Handler
+}
+
+package "com.campushelpdesk.strategy" {
+  interface SupportStrategy {
+    + respond(req:SupportRequest) : String
+  }
+
+  class ITSupportStrategy implements SupportStrategy
+  class FacilitiesSupportStrategy implements SupportStrategy
+  class RegistrarSupportStrategy implements SupportStrategy
+  class FinanceSupportStrategy implements SupportStrategy
+}
+
+package "com.campushelpdesk.observer" {
+  interface HelpdeskObserver {
+    + onRequestUpdate(req:SupportRequest) : void
+  }
+
+  class OfficeObserver implements HelpdeskObserver {
+    - office : String
+    + OfficeObserver(office:String)
+    + onRequestUpdate(req:SupportRequest) : void
+  }
+
+  class Notifier {
+    - observers : List<HelpdeskObserver>
+    + subscribe(obs:HelpdeskObserver) : void
+    + unsubscribe(obs:HelpdeskObserver) : void
+    + notifyAllObservers(req:SupportRequest) : void
+  }
+}
+
+package "com.campushelpdesk.util" {
+  class TicketGenerator {
+    {static} + next(type:String) : String
+  }
+}
+
+package "com.campushelpdesk" {
+  class Main
+}
+
+' ==== Relationships ====
+' Chain of Responsibility
+Handler "1" o- "0..1" Handler : next
+Handler <|-- SpamFilterHandler
+Handler <|-- PriorityHandler
+Handler <|-- TriageHandler
+Handler <|-- AssignmentHandler
+Handler <|-- SupportHandler
+
+' Strategy
+SupportStrategy <|.. ITSupportStrategy
+SupportStrategy <|.. FacilitiesSupportStrategy
+SupportStrategy <|.. RegistrarSupportStrategy
+SupportStrategy <|.. FinanceSupportStrategy
+
+' Observer
+HelpdeskObserver <|.. OfficeObserver
+Notifier "1" *-- "0..*" HelpdeskObserver
+SupportRequest "1" o-- "1" Notifier : notifier
+
+' Assignments & tickets
+AssignmentHandler --> TicketGenerator : uses
+SupportHandler --> SupportStrategy : selects at runtime
+
+' Data flow
+Handler --> SupportRequest : handle(req)
+Main ..> Notifier : builds/subscribes
+Main ..> Handler : builds chain
+Main ..> SupportRequest : creates
+
+@enduml
