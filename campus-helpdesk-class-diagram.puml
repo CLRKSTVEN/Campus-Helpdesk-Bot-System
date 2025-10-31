@@ -1,5 +1,5 @@
 @startuml
-title Campus Helpdesk Bot System — Class Diagram
+title Campus Helpdesk Bot System - Class Diagram
 
 skinparam packageStyle rectangle
 skinparam classAttributeIconSize 0
@@ -9,7 +9,7 @@ package "com.campushelpdesk.model" {
     - message : String
     - spam : boolean
     - priority : String
-    - type : String
+    - topic : SupportTopic
     - assignedOffice : String
     - response : String
     - ticketId : String
@@ -21,6 +21,8 @@ package "com.campushelpdesk.model" {
     + getPriority() : String
     + setPriority(String) : void
     + getType() : String
+    + getTopic() : SupportTopic
+    + setTopic(SupportTopic) : void
     + setType(String) : void
     + getAssignedOffice() : String
     + setAssignedOffice(String) : void
@@ -30,6 +32,21 @@ package "com.campushelpdesk.model" {
     + setTicketId(String) : void
     + getNotifier() : Notifier
     + setNotifier(Notifier) : void
+  }
+
+  enum SupportTopic {
+    - code : String
+    - displayName : String
+    - assignedOffice : String
+    - strategy : SupportStrategy
+    - keywords : List<String>
+    + getCode() : String
+    + getDisplayName() : String
+    + getAssignedOffice() : String
+    + getStrategy() : SupportStrategy
+    + getKeywords() : List<String>
+    {static} + fromMessage(message:String) : SupportTopic
+    {static} + fromCode(code:String) : SupportTopic
   }
 }
 
@@ -57,6 +74,8 @@ package "com.campushelpdesk.strategy" {
   class FacilitiesSupportStrategy implements SupportStrategy
   class RegistrarSupportStrategy implements SupportStrategy
   class FinanceSupportStrategy implements SupportStrategy
+  class LibrarySupportStrategy implements SupportStrategy
+  class GeneralSupportStrategy implements SupportStrategy
 }
 
 package "com.campushelpdesk.observer" {
@@ -102,20 +121,25 @@ SupportStrategy <|.. ITSupportStrategy
 SupportStrategy <|.. FacilitiesSupportStrategy
 SupportStrategy <|.. RegistrarSupportStrategy
 SupportStrategy <|.. FinanceSupportStrategy
+SupportStrategy <|.. LibrarySupportStrategy
+SupportStrategy <|.. GeneralSupportStrategy
 
 ' Observer
 HelpdeskObserver <|.. OfficeObserver
 Notifier "1" *-- "0..*" HelpdeskObserver
-SupportRequest "1" o-- "1" Notifier : notifier
+SupportRequest "1" o-- "0..1" Notifier : notifier
 
 ' Assignments & tickets
 AssignmentHandler --> TicketGenerator : uses
-SupportHandler --> SupportStrategy : selects at runtime
+SupportHandler --> SupportTopic : resolves strategy
+AssignmentHandler --> SupportTopic : resolves office
+SupportRequest "1" o-- "1" SupportTopic : topic
 
 ' Data flow
 Handler --> SupportRequest : handle(req)
 Main ..> Notifier : builds/subscribes
 Main ..> Handler : builds chain
 Main ..> SupportRequest : creates
+Main ..> SupportTopic : shows help
 
 @enduml

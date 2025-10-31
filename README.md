@@ -1,78 +1,62 @@
 # Campus Helpdesk Bot System (Console, Java 17+)
 
-A Java-based automated helpdesk assistant for a school/university using Behavioral Design Patterns.
+A console-based assistant that triages campus support tickets, demonstrates behavioural design patterns, and produces tailored responses for each office. The bot now centralises topic knowledge, includes library support, and offers an inline help command so users can discover keywords quickly.
 
-# System Overview
+## Project Overview
+- Accepts free-text requests from students or staff and turns them into routed tickets.
+- Filters spam, infers urgency, classifies the topic, assigns the owning office, and generates a contextual reply.
+- Notifies subscribed offices (Observer pattern) whenever a valid ticket is created.
+- Provides `help` and `exit` commands directly in the console for faster onboarding.
 
-The Campus Helpdesk Bot System simulates an automated student and staff support assistant for a university.
-Requesters choose their help topic—such as IT concerns, facilities issues, enrollment/records questions, or finance queries—and the system automatically routes, classifies, assigns, and responds.
+## Key Improvements
+- Introduced `SupportTopic` enum to keep keywords, owning offices, and strategies in one place. This removes duplicated switch statements and makes it easy to grow the catalogue.
+- Added dedicated strategies for General and Library support, plus richer priority heuristics.
+- Extended the observer list with the Library Services office and exposed a `help` command that prints sample keywords for every topic.
+- Updated UML (`campus-helpdesk-class-diagram.puml`) to reflect the refined architecture, including the topic catalogue.
 
-The system demonstrates three Behavioral Design Patterns working together:
+## Architecture at a Glance
+- **Chain of Responsibility (`src/com/campushelpdesk/chain`)**  
+  `SpamFilterHandler` -> `PriorityHandler` -> `TriageHandler` -> `AssignmentHandler` -> `SupportHandler`. Each handler performs one responsibility and can short-circuit the flow.
+- **Support Catalogue (`SupportTopic`)**  
+  Holds the topic code, display name, owning office, reply strategy, and keywords. `TriageHandler` calls `SupportTopic.fromMessage` to classify requests in a single step.
+- **Strategy Pattern (`src/com/campushelpdesk/strategy`)**  
+  Each topic has its own `SupportStrategy` implementation that renders customised guidance. General requests fall back to `GeneralSupportStrategy`.
+- **Observer Pattern (`src/com/campushelpdesk/observer`)**  
+  `Notifier` broadcasts ticket updates to subscribed `OfficeObserver` instances. In the demo this is console output, but it could call email, SMS, or chat APIs.
+- **Utilities (`src/com/campushelpdesk/util/TicketGenerator.java`)**  
+  Generates date-based ticket identifiers with topic-specific prefixes.
 
-# Chain of Responsibility
+## UML Diagram Guide
+Open `campus-helpdesk-class-diagram.puml` (or the exported `uml.png`) to view the structure:
+- The model package shows `SupportRequest` and `SupportTopic`. The association between them highlights that every processed request stores its resolved topic.
+- The chain package outlines the handler pipeline and the shared `setNext` link between handlers.
+- The strategy package displays all available response strategies, including the new General and Library implementations.
+- The observer package illustrates how offices subscribe to notifications.
+- Additional arrows capture how handlers depend on topics, strategies, and ticket generation.
 
-Requests flow through a pipeline of handlers:
+## Code Walkthrough
+1. `Main.java` prints the banner, registers observers (IT, Facilities, Registrar, Finance, Library), builds the handler chain, and loops on user input. Typing `help` displays the latest topic keywords.
+2. `SpamFilterHandler` rejects obviously irrelevant text.
+3. `PriorityHandler` uses a curated keyword list to upgrade critical incidents to `HIGH` priority.
+4. `TriageHandler` calls `SupportTopic.fromMessage` to map text to the proper topic (IT, Facilities, Registrar, Finance, Library, or General).
+5. `AssignmentHandler` stamps the owning office, issues a ticket number via `TicketGenerator`, and notifies observers.
+6. `SupportHandler` delegates to the topic-specific `SupportStrategy` and stores the generated response.
 
-SpamFilterHandler – screens out spam/irrelevant inputs
-
-PriorityHandler – classifies urgency (e.g., urgent, normal)
-
-TriageHandler – identifies request type (IT, Facilities, Registrar/Enrollment, Finance)
-
-AssignmentHandler – assigns to the right campus office/team
-
-SupportHandler – generates an appropriate reply using the selected strategy
-
-# Strategy Pattern
-
-The bot dynamically selects a support strategy based on the determined issue type:
-
-ITSupportStrategy – accounts, LMS, network, lab computers
-
-FacilitiesSupportStrategy – classroom repairs, power, cleanliness, equipment
-
-RegistrarSupportStrategy – enrollment, grades, academic records, certifications
-
-FinanceSupportStrategy – tuition/fees, payment posting, SOA, refunds
-
-You can extend this with additional strategies (e.g., LibrarySupportStrategy, GuidanceSupportStrategy) without changing the pipeline.
-
-# Observer Pattern
-
-The system notifies office observers whenever a valid request arrives or changes state.
-Observers can represent IT Helpdesk, Facilities Office, Registrar, Finance Office, or specific staff/technicians.
-This simulates email/Slack notifications (console output in this demo).
-
-# Typical Flow
-
-User submits a request (free-text + optional category/priority).
-
-Pipeline filters spam → sets priority → triages type → assigns office/team.
-
-The appropriate Strategy builds a tailored response/action plan.
-
-Observers (subscribed offices) are notified of the new/updated request.
-
-Request Types (Examples)
-
-IT: “I can’t log in to LMS” / “Wi-Fi is down in the library”
-
-Facilities: “Broken chair in Room 203” / “Aircon not working in Lab 2”
-
-Registrar: “How to request a transcript?” / “Grade not appearing”
-
-Finance: “Payment not reflected” / “Request Statement of Account”
-
-## Run (VS Code or IntelliJ)
-
-- Open this folder as a project.
-- Ensure JDK 17+.
-- Run `Main.java`.
-
-## Run (Command Line)
-
+## Running the Bot
 ```bash
 cd src
 javac com/campushelpdesk/**/*.java
 java com.campushelpdesk.Main
 ```
+While the program runs:
+- Type any request, for example `Wifi is down in the library` or `Need help requesting a transcript`.
+- Type `help` to see recognised keywords per topic.
+- Type `exit` to close the session.
+
+## Extending the System
+- Add a new topic by creating a strategy class and adding an entry to `SupportTopic`.
+- Plug the notifier into your preferred communication channel (email/SMS/Slack) by replacing the console printout in `OfficeObserver`.
+- Integrate persistence by storing `SupportRequest` snapshots after `SupportHandler` finishes.
+
+---
+Feel free to open an issue or send a pull request if you experiment with additional patterns or integrations. The modular design keeps new features low-risk.

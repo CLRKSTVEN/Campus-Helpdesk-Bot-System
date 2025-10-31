@@ -14,6 +14,7 @@ public class TicketGenerator {
                 case "FACILITIES": prefix = "FAC"; break;
                 case "REGISTRAR": prefix = "REG"; break;
                 case "FINANCE": prefix = "FIN"; break;
+                case "LIBRARY": prefix = "LIB"; break;
                 default: prefix = "GEN";
             }
         }
